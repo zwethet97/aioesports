@@ -59,16 +59,16 @@ class CasterController extends Controller
 
     public function showByGame($name)
     {
-        $players = Players::where('talent','caster')->select('id','name','team_id','player_image','cover_image','game','location')->sortBy('sort_no')->paginate();
+        $players = Players::where('talent','caster')->select('id','name','team_id','player_image','cover_image','game','location')->orderBy('sort_no')->paginate();
 
         $data = [];
 
         if($name != 'all')
         {
-            $players = Players::where('talent','caster')->where('game',$name)->select('id','name','team_id','player_image','cover_image','game','location')->sortBy('sort_no')->get();
+            $players = Players::where('talent','caster')->where('game',$name)->select('id','name','team_id','player_image','cover_image','game','location')->orderBy('sort_no')->paginate();
         }
 
-        foreach($players as $player)
+        foreach($players->items() as $player)
         {
             $data[] = [
                 'id' => $player['id'],
@@ -79,9 +79,17 @@ class CasterController extends Controller
                 'location' => $player['location']
             ];
         }
+
+        $pagination = [
+            'lastPage' => $players->lastPage(),
+            'currentPage' => $players->currentPage(),
+            'perPage' => $players->count(),
+            'totalItems' => $players->total()
+        ];
         
         $result = [
-            'data' => $data
+            'data' => $data,
+            'pagination' => $pagination
         ];
         return response([
             'result' => $result,
@@ -161,17 +169,28 @@ class CasterController extends Controller
             ]);
 
         }
-        $result = [
-            'data' => Players::where('talent','caster')->where('game',$name)->sortBy('sort_no')->paginate()
+
+        $players = Players::where('talent','caster')->where('game',$name)->orderBy('sort_no')->paginate();
+        
+        if ($filter != 'all')
+        {   
+            $players = Players::where('talent','caster')->where('game',$name)->where('status',$filter)
+            ->orderBy('sort_no')->paginate();
+        }
+        
+
+        $pagination = [
+            'lastPage' => $players->lastPage(),
+            'currentPage' => $players->currentPage(),
+            'perPage' => $players->count(),
+            'totalItems' => $players->total()
         ];
 
-        if ($filter != 'all')
-        {
-            $result = [
-                'data' => Players::where('talent','caster')->where('game',$name)->sortBy('sort_no')->where('status',$filter)
-                ->paginate()
-            ];
-        }
+        $result = [
+            'data' => $players->items(),
+            'pagination' => $pagination
+        ];
+
         return response([
             'result' => $result,
             'statusCode' => 200,

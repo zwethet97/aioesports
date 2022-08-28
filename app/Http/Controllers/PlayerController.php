@@ -96,11 +96,18 @@ class PlayerController extends Controller
         //     ];
         // }
         
+        $pagination = [
+            'lastPage' => $players->lastPage(),
+            'currentPage' => $players->currentPage(),
+            'perPage' => $players->count(),
+            'totalItems' => $players->total()
+        ];
         $result = [
-            'data' => $players
+            'data' => $players->items(),
+            'pagination' => $pagination
         ];
         return response([
-            'result' => $players,
+            'result' => $result,
             'statusCode' => 200,
             'message' => 'Success'
         ]);

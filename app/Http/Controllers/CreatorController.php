@@ -15,6 +15,7 @@ use Illuminate\Pagination\Paginator;
 
 class CreatorController extends Controller
 {
+  
     /**
      * Display a listing of the resource.
      *
@@ -65,10 +66,10 @@ class CreatorController extends Controller
 
         if($name != 'all')
         {
-            $players = Players::where('talent','creator')->where('game',$name)->select('id','name','player_image','cover_image','game','location')->orderBy('sort_no')->get();
+            $players = Players::where('talent','creator')->where('game',$name)->select('id','name','team_id','player_image','cover_image','game','location')->orderBy('sort_no')->paginate();
         }
 
-        foreach($players as $player)
+        foreach($players->items() as $player)
         {
             $data[] = [
                 'id' => $player['id'],
@@ -79,9 +80,17 @@ class CreatorController extends Controller
                 'location' => $player['location']
             ];
         }
+
+        $pagination = [
+            'lastPage' => $players->lastPage(),
+            'currentPage' => $players->currentPage(),
+            'perPage' => $players->count(),
+            'totalItems' => $players->total()
+        ];
         
         $result = [
-            'data' => $data
+            'data' => $data,
+            'pagination' => $pagination
         ];
         return response([
             'result' => $result,
@@ -161,17 +170,28 @@ class CreatorController extends Controller
             ]);
 
         }
-        $result = [
-            'data' => Players::where('talent','creator')->where('game',$name)->paginate()
+
+        $players = Players::where('talent','creator')->where('game',$name)->orderBy('sort_no')->paginate();
+        
+        if ($filter != 'all')
+        {   
+            $players = Players::where('talent','creator')->where('game',$name)->where('status',$filter)
+            ->orderBy('sort_no')->paginate();
+        }
+        
+
+        $pagination = [
+            'lastPage' => $players->lastPage(),
+            'currentPage' => $players->currentPage(),
+            'perPage' => $players->count(),
+            'totalItems' => $players->total()
         ];
 
-        if ($filter != 'all')
-        {
-            $result = [
-                'data' => Players::where('talent','creator')->where('game',$name)->where('status',$filter)
-                ->paginate()
-            ];
-        }
+        $result = [
+            'data' => $players->items(),
+            'pagination' => $pagination
+        ];
+
         return response([
             'result' => $result,
             'statusCode' => 200,

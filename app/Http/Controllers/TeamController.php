@@ -54,9 +54,20 @@ class TeamController extends Controller
             ]);
 
         }
-        $result = [
-            'data' => Team::where('game',$name)->select('id','team_name','team_image','cover_image','game','location')->orderBy('sort_no')->paginate()
+
+        $teams = Team::where('game',$name)->select('id','team_name','team_image','cover_image','game','location')->orderBy('sort_no')->paginate();
+        $pagination = [
+            'lastPage' => $teams->lastPage(),
+            'currentPage' => $teams->currentPage(),
+            'perPage' => $teams->count(),
+            'totalItems' => $teams->total()
         ];
+        $result = [
+            'data' => $teams->items(),
+            'pagination' => $pagination
+        ];
+
+        
         return response([
             'result' => $result,
             'statusCode' => 200,
@@ -79,16 +90,25 @@ class TeamController extends Controller
             ]);
 
         }
-        $result = [
-            'data' => Team::where('game',$name)->select('id','team_name','team_image','cover_image','game','location')->orderBy('sort_no')->paginate()
-        ];
-
+        
+        $teams = Team::where('game',$name)->where('status',$filter)->select('id','team_name','team_image','cover_image','game','location')->orderBy('sort_no')->paginate();
         if ($filter != 'all')
         {
-            $result = [
-                'data' => Team::where('game',$name)->where('status',$filter)->select('id','team_name','team_image','cover_image','game','location')->orderBy('sort_no')->paginate()
-            ];
+            $teams = Team::where('game',$name)->where('status',$filter)->select('id','team_name','team_image','cover_image','game','location')->orderBy('sort_no')->paginate();
         }
+        $pagination = [
+            'lastPage' => $teams->lastPage(),
+            'currentPage' => $teams->currentPage(),
+            'perPage' => $teams->count(),
+            'totalItems' => $teams->total()
+        ];
+
+        $result = [
+            'data' => $teams->items(),
+            'pagination' => $pagination
+        ];
+
+        
         return response([
             'result' => $result,
             'statusCode' => 200,
