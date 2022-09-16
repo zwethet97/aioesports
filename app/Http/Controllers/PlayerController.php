@@ -19,45 +19,42 @@ class PlayerController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {   
-        $players = [
-            'dota' => Players::where('talent','player')
-                                ->join('teams','players.team_id','=','teams.id')
-                                ->select('players.*','teams.team_name','teams.team_image')
-                                ->where('players.game','dota')
-                                ->take(3)->get(),
-            'mlbb' => Players::where('talent','player')
-                                ->join('teams','players.team_id','=','teams.id')
-                                ->select('players.*','teams.team_name','teams.team_image')
-                                ->where('players.game','mlbb')
-                                ->take(3)->get(),
-            'aov' => Players::where('talent','player')
-                                ->join('teams','players.team_id','=','teams.id')
-                                ->select('players.*','teams.team_name','teams.team_image')
-                                ->where('players.game','aov')
-                                ->take(3)->get(),
-            'lol' => Players::where('talent','player')
-                                ->join('teams','players.team_id','=','teams.id')
-                                ->select('players.*','teams.team_name','teams.team_image')
-                                ->where('players.game','lol')
-                                ->take(3)->get(),
-            'valorant' => Players::where('talent','player')
-                                ->join('teams','players.team_id','=','teams.id')
-                                ->select('players.*','teams.team_name','teams.team_image')
-                                ->where('players.game','valorant')
-                                ->take(3)->get(),
-            'csgo' => Players::where('talent','player')
-                                ->join('teams','players.team_id','=','teams.id')
-                                ->select('players.*','teams.team_name','teams.team_image')
-                                ->where('players.game','csgo')
-                                ->take(3)->get()
+        $players = Players::where('talent','player')
+                            ->join('teams','players.team_id','=','teams.id')
+                            ->select('players.*','teams.team_name','teams.team_image')
+                            ->paginate();
+
+        if($request->gameType!='')
+        {
+            $players = Players::where('talent','player')
+                            ->where('game',$request->gameType)
+                            ->join('teams','players.team_id','=','teams.id')
+                            ->select('players.*','teams.team_name','teams.team_image')
+                            ->paginate();
+            if($request->status!='')
+                {
+                    $players = Players::where('talent','player')
+                                    ->where('game',$request->gameType)
+                                    ->where('status',$request->status)
+                                    ->join('teams','players.team_id','=','teams.id')
+                                    ->select('players.*','teams.team_name','teams.team_image')
+                                    ->paginate();
+                }
+        }
+        $pagination = [
+            'lastPage' => $players->lastPage(),
+            'currentPage' => $players->currentPage(),
+            'perPage' => $players->count(),
+            'totalItems' => $players->total()
         ];
         $result = [
-            'data' => $players
+            'data' => $players->items(),
+            'pagination' => $pagination
         ];
         return response([
-            'result' => $players,
+            'result' => $result,
             'statusCode' => 200,
             'message' => 'Success'
         ]);
@@ -129,35 +126,42 @@ class PlayerController extends Controller
             ]);
 
         }
-        $result = [
-            'data' => Players::where('talent','player')->join('teams','players.team_id','=','teams.id')
+
+        $players = Players::where('talent','player')->join('teams','players.team_id','=','teams.id')
             ->where('players.game','=',$name)
             ->where('players.talent','=',$name)
             ->select('players.*','teams.team_name','teams.team_image')
             ->orderBy('players.sort_no')
-            ->paginate()
-        ];
+            ->paginate();
+        
 
         if ($filter != 'all')
         {
-            $result = [
-                'data' => Players::where('talent','player')->join('teams','players.team_id','=','teams.id')
+           $players = Players::where('talent','player')->join('teams','players.team_id','=','teams.id')
                 ->where('players.game','=',$name)
                 ->where('players.status','=',$filter)
                 ->select('players.*','teams.team_name','teams.team_image')
-                ->paginate()
-            ];
+                ->paginate();
         }
 
         if ($filter == 'noactive')
         {
-            $result = [
-                'data' => Players::where('talent','player')
+            $players = Players::where('talent','player')
                 ->where('game','=',$name)
                 ->where('status','=',$filter)
-                ->paginate()
-            ];
+                ->paginate();
         }
+
+        $pagination = [
+            'lastPage' => $players->lastPage(),
+            'currentPage' => $players->currentPage(),
+            'perPage' => $players->count(),
+            'totalItems' => $players->total()
+        ];
+        $result = [
+            'data' => $players->items(),
+            'pagination' => $pagination
+        ];
         return response([
             'result' => $result,
             'statusCode' => 200,
@@ -197,15 +201,19 @@ class PlayerController extends Controller
         }
 
         $stats = Players::where('id',$id)->first();
+        $statsOverall = [
+            'detail' => $stats,
+            'signature' => $signature,
+            'social' => $social
+        ];
+        
         $social = Social::where('player_id',$id)->get();
         $signature = Signature::where('player_id',$id)->get();
         $sponsor = Sponsor::where('player_id',$id)->get();
         $achieve = Achieve::where('player_id',$id)->get();
         $career = Career::where('player_id',$id)->get();
         $data = [
-            'stats' => $stats,
-            'social_link' => $social,
-            'signature' => $signature,
+            'stats' => $statsOverall,
             'sponsor' => $sponsor,
             'achieve' => $achieve,
             'career' => $career

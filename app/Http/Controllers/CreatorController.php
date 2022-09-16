@@ -23,15 +23,20 @@ class CreatorController extends Controller
      */
     public function index()
     {   
-        $players = [
-            'dota' => Players::where('game','dota')->where('talent','creator')->orderBy('sort_no')->take(3)->get(),
-            'mlbb' => Players::where('game','mlbb')->where('talent','creator')->orderBy('sort_no')->take(3)->get(),
-            'aov' => Players::where('game','aov')->where('talent','creator')->orderBy('sort_no')->take(3)->get(),
-            'valorant' => Players::where('game','valorant')->where('talent','creator')->orderBy('sort_no')->take(3)->get(),
-            'lol' => Players::where('game','lol')->where('talent','creator')->orderBy('sort_no')->take(3)->get(),
-            'csgo' => Players::where('game','csgo')->where('talent','creator')->orderBy('sort_no')->take(3)->get()
-        ];
+        $players = Players::where('talent','creator')->orderBy('sort_no')->paginate();
 
+
+        if($request->gameType!='')
+        {
+            $players = Players::where('game',$request->gameType)->where('talent','creator')->orderBy('sort_no')->paginate();
+            
+            if($request->status!='')
+            {
+                $players = Players::where('game',$request->gameType)->where('game',$request->status)->where('talent','creator')->orderBy('sort_no')->paginate();
+
+            }
+
+        }
         // $data = [];
 
         // foreach($players as $player)
@@ -46,12 +51,19 @@ class CreatorController extends Controller
         //         'location' => $player['location']
         //     ];
         // }
+        $pagination = [
+            'lastPage' => $players->lastPage(),
+            'currentPage' => $players->currentPage(),
+            'perPage' => $players->count(),
+            'totalItems' => $players->total()
+        ];
         
         $result = [
-            'data' => $players
+            'data' => $data,
+            'pagination' => $pagination
         ];
         return response([
-            'result' => $players,
+            'result' => $result,
             'statusCode' => 200,
             'message' => 'Success'
         ]);
