@@ -21,20 +21,33 @@ class TeamController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $data = [
-            'dota' => Team::where('game','dota')->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->take(3)->get(),
-            'mlbb' => Team::where('game','mlbb')->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->take(3)->get(),
-            'aov' => Team::where('game','aov')->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->take(3)->get(),
-            'csgo' => Team::where('game','csgo')->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->take(3)->get(),
-            'valorant' => Team::where('game','valorant')->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->take(3)->get(),
-            'lol' => Team::where('game','lol')->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->take(3)->get()
+        $teams = Team::select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->paginate();
+        
+        if($request->gameType!='')
+        {
+            $teams = Team::where('game',$request->gameType)->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->paginate();
 
+            if($request->status!='')
+            {
+            $teams = Team::where('game',$request->gameType)->where('status',$request->status)->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->paginate();
 
+            }
+        }
+        $pagination = [
+            'lastPage' => $teams->lastPage(),
+            'currentPage' => $teams->currentPage(),
+            'perPage' => $teams->count(),
+            'totalItems' => $teams->total()
         ];
+        $result = [
+            'data' => $teams->items(),
+            'pagination' => $pagination
+        ];
+        
         return response([
-            'result' => $data,
+            'result' => $result,
             'statusCode' => 200,
             'message' => 'Success'
         ]);
@@ -148,9 +161,20 @@ class TeamController extends Controller
 
         $stats = Team::where('id',$id)->first();
         $social = Social::where('team_id',$id)->get();
+
+        $statsOverall = [
+            'detail' => $stats,
+            'social' => $social
+        ];
+
         $sponsor = Sponsor::where('team_id',$id)->get();
         $achieve = Achieve::where('team_id',$id)->get();
-        $former = FormerPlayer::where('team_id',$id)->get();
+        $formers = FormerPlayer::where('team_id',$id)->get();
+        $formerPlayers = [];
+        foreach($formers as $former)
+        {
+            $formerPlayers = Players::where('id',$former['player_id'])->first();
+        }
         $player = Team_player::where('team_id',$id)->first();
 
         $coach = 'n/a';
@@ -164,26 +188,20 @@ class TeamController extends Controller
         {
             $analyst = Players::where('id',$player['analyst_id'])->first();
         }
-        
-        $roster = [
+    
+        $players = [
+            'coach' => $coach,
+            'analyst' => $analyst,
             'roster1' => Players::where('id',$player['pos1_id'])->first(),
             'roster2' => Players::where('id',$player['pos2_id'])->first(),
             'roster3' => Players::where('id',$player['pos3_id'])->first(),
             'roster4' => Players::where('id',$player['pos4_id'])->first(),
             'roster5' => Players::where('id',$player['pos5_id'])->first()
-
-        ];
-
-        $players = [
-            'coach' => $coach,
-            'analyst' => $analyst,
-            'rosters' => $roster
         ];
         $data = [
-            'stats' => $stats,
-            'social_link' => $social,
+            'stats' => $statsOverall,
             'player' => $players,
-            'former_player' => $former,
+            'former_player' => $formerPlayers,
             'sponsor' => $sponsor,
             'achieve' => $achieve
         ];

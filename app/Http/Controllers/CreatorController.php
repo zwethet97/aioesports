@@ -29,7 +29,7 @@ class CreatorController extends Controller
         if($request->gameType!='')
         {
             $players = Players::where('game',$request->gameType)->where('talent','creator')->orderBy('sort_no')->paginate();
-            
+
             if($request->status!='')
             {
                 $players = Players::where('game',$request->gameType)->where('game',$request->status)->where('talent','creator')->orderBy('sort_no')->paginate();
@@ -143,17 +143,23 @@ class CreatorController extends Controller
             ]);
         }
 
+  
         $stats = Players::where('id',$id)->first();
         $social = Social::where('player_id',$id)->get();
+
         $sponsor = Sponsor::where('player_id',$id)->get();
         $game = GameCategory::where('talent_id',$id)->get();
+        $statsOverall = [
+            'detail' => $stats,
+            'social' => $social,
+            'games' => $game
+        ];
+
         $achieve = Achieve::where('player_id',$id)->get();
         $career = Career::where('player_id',$id)->get();
         $data = [
-            'stats' => $stats,
-            'social_link' => $social,
+            'stats' => $statsOverall,
             'sponsor' => $sponsor,
-            'games' => $game,
             'achieve' => $achieve,
             'career' => $career
         ];

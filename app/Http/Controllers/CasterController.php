@@ -22,14 +22,19 @@ class CasterController extends Controller
      */
     public function index()
     {   
-        $players = [
-            'dota' => Players::where('game','dota')->where('talent','caster')->orderBy('sort_no')->take(3)->get(),
-            'mlbb' => Players::where('game','mlbb')->where('talent','caster')->orderBy('sort_no')->take(3)->get(),
-            'aov' => Players::where('game','aov')->where('talent','caster')->orderBy('sort_no')->take(3)->get(),
-            'valorant' => Players::where('game','valorant')->where('talent','caster')->orderBy('sort_no')->take(3)->get(),
-            'lol' => Players::where('game','lol')->where('talent','caster')->orderBy('sort_no')->take(3)->get(),
-            'csgo' => Players::where('game','csgo')->where('talent','caster')->orderBy('sort_no')->take(3)->get()
-        ];
+        $players = Players::where('talent','caster')->orderBy('sort_no')->paginate();
+        
+        if($request->gameType!='')
+        {
+            $players = Players::where('game',$request->gameType)->where('talent','caster')->orderBy('sort_no')->paginate();
+            
+            if($request->status!='')
+            {
+                $players = Players::where('game',$request->gameType)->where('game',$request->status)->where('talent','caster')->orderBy('sort_no')->paginate();
+
+            }
+
+        }
 
         // $data = [];
 
@@ -45,12 +50,19 @@ class CasterController extends Controller
         //         'location' => $player['location']
         //     ];
         // }
+        $pagination = [
+            'lastPage' => $players->lastPage(),
+            'currentPage' => $players->currentPage(),
+            'perPage' => $players->count(),
+            'totalItems' => $players->total()
+        ];
         
         $result = [
-            'data' => $players
+            'data' => $data,
+            'pagination' => $pagination
         ];
         return response([
-            'result' => $players,
+            'result' => $result,
             'statusCode' => 200,
             'message' => 'Success'
         ]);
@@ -132,15 +144,20 @@ class CasterController extends Controller
 
         $stats = Players::where('id',$id)->first();
         $social = Social::where('player_id',$id)->get();
-        $sponsor = Sponsor::where('player_id',$id)->get();
         $game = GameCategory::where('talent_id',$id)->get();
+
+
+        $statsOverall = [
+            'detail' => $stats,
+            'social' => $social,
+            'games' => $game
+        ];
+        $sponsor = Sponsor::where('player_id',$id)->get();
         $achieve = Achieve::where('player_id',$id)->get();
         $career = Career::where('player_id',$id)->get();
         $data = [
-            'stats' => $stats,
-            'social_link' => $social,
+            'stats' => $statsOverall,
             'sponsor' => $sponsor,
-            'games' => $game,
             'achieve' => $achieve,
             'career' => $career
         ];
