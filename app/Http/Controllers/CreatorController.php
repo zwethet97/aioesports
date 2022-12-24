@@ -21,19 +21,34 @@ class CreatorController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {   
         $players = Players::where('talent','creator')->orderBy('sort_no')->paginate();
 
 
         if($request->gameType!='')
         {
-            $players = Players::where('game',$request->gameType)->where('talent','creator')->orderBy('sort_no')->paginate();
-
+            $players = Players::where('game',$request->gameType)->where('talent','creator')->where('visable','1')->orderBy('sort_no','DESC')->orderBy('name')->paginate();
+            
             if($request->status!='')
-            {
-                $players = Players::where('game',$request->gameType)->where('game',$request->status)->where('talent','creator')->orderBy('sort_no')->paginate();
+            {   
 
+                    if ($request->gameType=='all' && $request->status =='all')
+                    {
+                        $players = Players::where('talent','creator')->where('visable','1')->orderBy('sort_no','DESC')->orderBy('name')->paginate();
+                    }
+                    elseif($request->gameType=='all')
+                    {
+                        $players = Players::where('talent','creator')->where('status',$request->status)->where('visable','1')->orderBy('sort_no','DESC')->orderBy('name')->paginate();
+                    }
+                    elseif($request->status=='all')
+                    {
+                        $players = Players::where('talent','creator')->where('game',$request->gameType)->where('visable','1')->orderBy('sort_no','DESC')->orderBy('name')->paginate();
+                    }
+                    else
+                    {
+                        $players = Players::where('game',$request->gameType)->where('status',$request->status)->where('talent','caster')->where('visable','1')->orderBy('sort_no','DESC')->orderBy('name')->paginate();
+                    }
             }
 
         }
@@ -59,7 +74,7 @@ class CreatorController extends Controller
         ];
         
         $result = [
-            'data' => $data,
+            'data' => $players->items(),
             'pagination' => $pagination
         ];
         return response([
@@ -72,7 +87,7 @@ class CreatorController extends Controller
 
     public function showByGame($name)
     {
-        $players = Players::where('talent','creator')->select('id','name','team_id','player_image','cover_image','game','location')->orderBy('sort_no')->paginate();
+        $players = Players::where('talent','creator')->select('id','name','team_id','player_image','cover_image','game','location')->orderBy('sort_no','DESC')->paginate();
 
         $data = [];
 
@@ -144,19 +159,78 @@ class CreatorController extends Controller
         }
 
   
-        $stats = Players::where('id',$id)->first();
+        $stats = Players::where('id',$id)->orderBy('sort_no','DESC')->first();
         $social = Social::where('player_id',$id)->get();
 
-        $sponsor = Sponsor::where('player_id',$id)->get();
+        $sponsor = Sponsor::where('player_id',$id)->orderBy('sort_no','DESC')->get();
         $game = GameCategory::where('talent_id',$id)->get();
+        if($social->isEmpty())
+        {
+            $social = NULL; 
+        }
+        if($game->isEmpty())
+        {
+            $game = NULL; 
+        }
         $statsOverall = [
             'detail' => $stats,
             'social' => $social,
-            'games' => $game
+            'main_game' => $stats['game'],
+            'sub_games' => $game
         ];
 
-        $achieve = Achieve::where('player_id',$id)->get();
-        $career = Career::where('player_id',$id)->get();
+        $ascoach = Achieve::where('player_id',$id)->join('teams','achieves.team_id','=','teams.id')
+                        ->select('achieves.tour_logo','achieves.tour_name','achieves.as','achieves.tier','achieves.place','achieves.sort_no','teams.team_name','teams.team_image','teams.id')
+                        ->where('achieves.as','coach')
+                        ->orderBy('achieves.sort_no','DESC')
+                        ->get();
+        $ascaster = Achieve::where('player_id',$id)
+                        ->select('tour_logo','tour_name','as','tier','place','sort_no')
+                        ->where('achieves.as','caster')
+                        ->orderBy('achieves.sort_no','DESC')
+                        ->get();
+        $asplayer = Achieve::where('player_id',$id)->join('teams','achieves.team_id','=','teams.id')
+                        ->select('achieves.tour_logo','achieves.tour_name','achieves.as','achieves.tier','achieves.place','achieves.sort_no','teams.team_name','teams.team_image','teams.id')
+                        ->where('achieves.as','player')
+                        ->orderBy('achieves.sort_no','DESC')
+                        ->get();
+        $ascreator = Achieve::where('player_id',$id)->join('teams','achieves.team_id','=','teams.id')
+                        ->where('achieves.as','creator')
+                        ->select('achieves.tour_logo','achieves.tour_name','achieves.as','achieves.tier','achieves.place','achieves.sort_no')
+                        ->orderBy('achieves.sort_no','DESC')
+                        ->get();
+        if($ascoach->isEmpty())
+        {
+            $ascoach = NULL; 
+        }
+        if($ascaster->isEmpty())
+        {
+            $ascaster = NULL; 
+        }
+        if($asplayer->isEmpty())
+        {
+            $asplayer = NULL; 
+        }
+        
+        $achieve = [
+            'as caster' => $ascaster,
+            'as coach' => $ascoach,
+            'as player' => $asplayer
+        
+            ];
+
+        $career = Career::where('player_id',$id)->join('teams','careers.team_id','=','teams.id')
+                        ->select('careers.from_time','careers.to_time','teams.team_name','teams.team_image','teams.id','teams.city','teams.location')
+                        ->orderBy('careers.sort_no','DESC')->get();
+        if($career->isEmpty())
+        {
+            $career = NULL; 
+        }
+        if($sponsor->isEmpty())
+        {
+            $sponsor = NULL; 
+        }
+
         $data = [
             'stats' => $statsOverall,
             'sponsor' => $sponsor,

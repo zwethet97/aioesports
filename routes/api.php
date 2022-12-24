@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\CasterController;
 use App\Http\Controllers\CreatorController;
-
+use App\Http\Controllers\UserAuthController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\HomeController;
@@ -37,7 +37,9 @@ Route::get('/player', [PlayerController::class, 'index']);
 Route::get('/caster', [CasterController::class, 'index']);
 Route::get('/creator', [CreatorController::class, 'index']);
 
-
+Route::post('/register', [UserAuthController::class, 'register']);
+Route::post('/verify', [UserAuthController::class, 'verifyOTP']);
+Route::post('/login', [UserAuthController::class, 'login']);
 Route::get('/player/filter/{name}', [PlayerController::class, 'showByGame']);
 Route::get('/caster/filter/{name}', [CasterController::class, 'showByGame']);
 Route::get('/creator/filter/{name}', [CreatorController::class, 'showByGame']);
@@ -53,6 +55,8 @@ Route::get('/noti', [NotiController::class, 'index']);
 
 
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::group(['middleware' => ['auth:sanctum']],function(){
+
+    Route::post('/user/update/{id}', [UserAuthController::class, 'update']);
+    
 });

@@ -32,6 +32,23 @@ class HomeController extends Controller
         ]);
     }
 
+    public function getVersion()
+    {
+        return response([
+            'result' => '1',
+            'statusCode' => 200,
+            'message' => 'Success'
+        ]);
+    }
+
+    public function forceUpdate()
+    {
+        return response([
+            'result' => '1',
+            'statusCode' => 200,
+            'message' => 'Success'
+        ]);
+    }
     /**
      * Store a newly created resource in storage.
      *

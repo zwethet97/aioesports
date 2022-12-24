@@ -5,6 +5,7 @@ use App\Models\Team;
 use App\Models\Players;
 use App\Models\Team_player;
 use App\Models\FormerPlayer;
+use App\Models\Rosters;
 use App\Models\Achieve;
 use App\Models\Social;
 use App\Models\Sponsor;
@@ -23,17 +24,33 @@ class TeamController extends Controller
      */
     public function index(Request $request)
     {
-        $teams = Team::select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->paginate();
+        $teams = Team::where('visable','1')->select('id','team_name','team_image','cover_image','game','location','city','sort_no')->orderBy('sort_no','DESC')->orderBy('team_name')->paginate();
         
         if($request->gameType!='')
         {
-            $teams = Team::where('game',$request->gameType)->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->paginate();
-
+            $teams = Team::where('visable','1')->where('game',$request->gameType)->select('id','team_name','team_image','cover_image','game','location','city','sort_no')->orderBy('sort_no','DESC')->orderBy('team_name')->paginate();
+            
             if($request->status!='')
-            {
-            $teams = Team::where('game',$request->gameType)->where('status',$request->status)->select('id','team_name','team_image','cover_image','game','location','sort_no')->orderBy('sort_no')->paginate();
+            {   
 
+                    if ($request->gameType=='all' && $request->status =='all')
+                    {
+                        $teams = Team::where('visable','1')->select('id','team_name','team_image','cover_image','game','location','city','sort_no')->orderBy('sort_no','DESC')->orderBy('team_name')->paginate();
+                    }
+                    elseif($request->gameType=='all')
+                    {
+                        $teams = Team::where('status',$request->status)->where('visable','1')->select('id','team_name','team_image','cover_image','game','city','location','sort_no')->orderBy('sort_no','DESC')->orderBy('team_name')->paginate();
+                    }
+                    elseif($request->status=='all')
+                    {
+                        $teams = Team::where('game',$request->gameType)->where('visable','1')->select('id','team_name','team_image','cover_image','game','location','city','sort_no')->orderBy('sort_no','DESC')->orderBy('team_name')->paginate();
+                    }
+                    else
+                    {
+                        $teams = Team::where('game',$request->gameType)->where('visable','1')->where('status',$request->status)->select('id','team_name','team_image','cover_image','game','city','location','sort_no')->orderBy('sort_no','DESC')->orderBy('team_name')->paginate();
+                    }
             }
+
         }
         $pagination = [
             'lastPage' => $teams->lastPage(),
@@ -161,47 +178,105 @@ class TeamController extends Controller
 
         $stats = Team::where('id',$id)->first();
         $social = Social::where('team_id',$id)->get();
-
+        if($social->isEmpty())
+        {
+            $social = NULL; 
+        }
         $statsOverall = [
             'detail' => $stats,
             'social' => $social
         ];
 
-        $sponsor = Sponsor::where('team_id',$id)->get();
-        $achieve = Achieve::where('team_id',$id)->get();
-        $formers = FormerPlayer::where('team_id',$id)->get();
-        $formerPlayers = [];
-        foreach($formers as $former)
-        {
-            $formerPlayers = Players::where('id',$former['player_id'])->first();
-        }
+        $sponsor = Sponsor::where('team_id',$id)->orderBy('sort_no','DESC')->get();
+        $achieve = Achieve::where('team_id',$id)->where('player_id','-')->where('as','team')->select('tour_name','tour_logo','tier','place','sort_no')->orderBy('sort_no','DESC')->get();
+        $formers = FormerPlayer::join('players','former_players.player_id','=','players.id')
+                                ->where('former_players.team_id','=',$id)
+                                ->join('teams','players.team_id','=','teams.id')
+                                ->select('players.id','players.talent','players.name','players.player_image','players.game','players.location','players.city','former_players.from_time','former_players.to_time','teams.team_image')
+                                ->orderBy('former_players.sort_no','DESC')
+                                ->orderBy('players.name')
+                                ->get();
+        
+        $players = NULL;
+        
         $player = Team_player::where('team_id',$id)->first();
-
-        $coach = 'n/a';
-        if($player['coach_id'] != '-')
+        $rostercheck = Rosters::where('team_id',$id)->first();
+        
+        if ($rostercheck)
         {
-            $coach = Players::where('id',$player['coach_id'])->first();
-        }
-
-        $analyst = 'n/a';
-        if($player['coach_id'] != '-')
+        $headcoach = NULL;
+        $asistcoach = NULL;
+        $tdirector = NULL;
+        $analyst = NULL;
+        $roster = NULL;
+        if($player)
         {
-            $analyst = Players::where('id',$player['analyst_id'])->first();
-        }
+            
+        $headcoach = Players::where('id',$player['head_coach_id'])->first();
+        $analyst = Players::where('id',$player['analyst_id'])->first();
+        $asistcoach = Players::where('id',$player['a_coach_id'])->first();
+        $tdirector = Players::where('id',$player['t_director_id'])->first();
+        
+        
     
+        if($headcoach == '')
+        {
+            $headcoach = NULL;
+        }
+        
+        if($asistcoach == '')
+        {
+            $asistcoach = NULL;
+        }
+        
+        if($tdirector == '')
+        {
+            $tdirector = NULL;
+        }
+
+        
+        if($analyst == '')
+        {
+            $analyst = NULL;
+        }
+        
+        }
+        
+        $roster = Rosters::join('players','rosters.player_id','=','players.id')
+                            ->where('rosters.team_id','=',$id)
+                            ->select('players.id','players.name','players.talent','players.player_image','players.game','players.location','players.city')
+                            ->orderBy('players.name')
+                            ->get();
+        if($roster->isEmpty())
+        {
+            $roster = NULL;
+        }
+        
         $players = [
-            'coach' => $coach,
+            'headcoach' => $headcoach,
+            'asistcoach' => $asistcoach,
+            'technicaldirector' => $tdirector,
             'analyst' => $analyst,
-            'roster1' => Players::where('id',$player['pos1_id'])->first(),
-            'roster2' => Players::where('id',$player['pos2_id'])->first(),
-            'roster3' => Players::where('id',$player['pos3_id'])->first(),
-            'roster4' => Players::where('id',$player['pos4_id'])->first(),
-            'roster5' => Players::where('id',$player['pos5_id'])->first()
+            'roster' => $roster
         ];
+        }
+        
+        if($sponsor->isEmpty())
+        {
+            $sponsor = NULL; 
+        }
+        if($achieve->isEmpty())
+        {
+            $achieve = NULL; 
+        }
+        if($formers->isEmpty())
+        {
+            $formers = NULL; 
+        }
         $data = [
             'stats' => $statsOverall,
             'player' => $players,
-            'former_player' => $formerPlayers,
+            'former_player' => $formers,
             'sponsor' => $sponsor,
             'achieve' => $achieve
         ];
